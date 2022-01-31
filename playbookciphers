@@ -1,0 +1,82 @@
+---
+####Playbook Mitigation TLS_RSA_WITH_SEED_CBC_SHA
+#TLS auth
+- name: playbook
+  hosts: 192.168.10.77
+  become: yes
+  become_user: remi_admin
+  tasks:
+    - name: security level smtpd encrypt
+      shell: echo "smtpd_tls_security_level = encrypt"
+    - name: add conf   
+      lineinfile:
+        path: /etc/postfix/main.cf
+        line: smtpd_tls_security_level = encrypt
+    - name: security level smtp encrypt
+      shell: echo "smtp_tls_security_level = encrypt"
+    - name: add conf 
+      lineinfile:
+        path: /etc/postfix/main.cf
+        line: smtp_tls_security_level = encrypt 
+    - name: Desactivate  obselete protocol mandatory 
+      shell: echo "smtpd_tls_mandatory_protocols = !SSLv2,!SSLv3,!TLSv1,!TLSv1.1"
+    - name: add conf 
+      lineinfile:
+        path: /etc/postfix/main.cf
+        line: smtpd_tls_mandatory_protocols = !SSLv2,!SSLv3,!TLSv1,!TLSv1.1   
+    - name: Desactivate obselete protocols
+      shell: echo "smtpd_tls_protocols = !SSLv2,!SSLv3,!TLSv1,!TLSv1.1"
+    - name: add conf 
+      lineinfile:
+        path: /etc/postfix/main.cf
+        line: smtpd_tls_protocols = !SSLv2,!SSLv3,!TLSv1,!TLSv1.1
+    - name: Desactive compression VULNS CRIME 
+      shell: echo "tls_ssl_options = NO_COMPRESSION, NO-RENEGOTIATION"
+    - name: add conf 
+      lineinfile:
+        path: /etc/postfix/main.cf
+        line: tls_ssl_options = NO_COMPRESSION, NO-RENEGOTIATION
+
+#######Excude cipher SMTPD SMTP ORDER 
+    
+    - name: smtpd tls mandatory exclude ciphers
+      shell: echo "smtpd_tls_mandatory_exclude_ciphers = MD5, DES, RSA, ADH, RC4, PSD, SRP, 3DES, eNULL, aNULL"
+    - name: add conf 
+      lineinfile:
+        path: /etc/postfix/main.cf
+        line: smtpd_tls_mandatory_exclude_ciphers = MD5, DES, RSA, ADH, RC4, PSD, SRP, 3DES, eNULL, aNULL
+    - name: smtpd tls excude ciphers
+      shell: echo "smtpd_tls_exclude_ciphers = MD5, DES, RSA, ADH, RC4, PSD, SRP, 3DES, eNULL, aNULL"
+    - name: add conf 
+      lineinfile: 
+        path: /etc/postfix/main.cf
+        line: smtpd_tls_exclude_ciphers = MD5, DES, RSA, ADH, RC4, PSD, SRP, 3DES, eNULL, aNULL
+    - name: smtp tls mandatory ciphers
+      shell: echo "smtp_tls_mandatory_exclude_ciphers = MD5, DES, RSA, ADH, RC4, PSD, SRP, 3DES, eNULL, aNULL"   ###RC4 & TLS_RSA_WITH_SEED_CBC_SHA MITIGATION COTER SERVER
+    - name: add conf 
+      lineinfile: 
+        path: /etc/postfix/main.cf
+        line: smtp_tls_mandatory_exclude_ciphers = MD5, DES, RSA, ADH, RC4, PSD, SRP, 3DES, eNULL, aNULL ######RC4 & TLS_RSA_WITH_SEED_CBC_SHA MITIGATION COTER CLIENT
+    - name: Confidentiality transfert 
+      shell: echo "tls_preempt_cipherlist = yes"
+    - name: add conf  
+      lineinfile:
+        path: /etc/postfix/main.cf
+        line: tls_preempt_cipherlist = yes
+
+######RECOMMANDED ANSI
+    - name: ciphers list recommanded  
+      shell: echo "tls_high_cipherlist = ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-CBC-SHA384:ECDHE-RSA-AES128-CBC-SHA256"
+    - name: add conf 
+      lineinfile:
+        path: /etc/postfix/main.cf
+        line: tls_high_cipherlist = ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-CBC-SHA384:ECDHE-RSA-AES128-CBC-SHA256
+    - name: restart postfix
+      shell: service postfix restart
+    - name: check status 
+      shell: service postfix status
+    - name: verify error occured
+      shell: echo $?
+      register: result1
+    - debug:
+        msg: "{{result1.stdout}}"
